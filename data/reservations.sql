@@ -1,0 +1,22 @@
+TRUNCATE TABLE reservations;
+
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (1, 20, 36, 2025-04-29 19:04:33, 2);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (2, 42, 22, 2025-06-13 14:29:04, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (3, 43, 45, 2025-06-08 02:31:19, 3);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (4, 44, 34, 2025-02-06 15:26:00, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (5, 42, 43, 2025-07-23 17:10:18, 2);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (6, 33, 24, 2025-08-08 21:24:04, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (7, 24, 20, 2025-06-01 01:58:26, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (8, 14, 22, 2025-01-03 20:53:25, 2);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (9, 13, 15, 2025-08-19 07:42:09, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (10, 10, 5, 2025-05-05 14:55:00, 2);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (11, 7, 33, 2025-04-26 16:17:38, 3);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (12, 48, 34, 2025-05-03 05:20:20, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (13, 43, 22, 2025-02-10 18:31:20, 3);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (14, 9, 39, 2025-07-05 05:25:43, 2);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (15, 10, 11, 2025-03-21 00:51:22, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (16, 45, 50, 2025-03-23 13:33:36, 3);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (17, 11, 47, 2025-03-10 13:33:57, 2);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (18, 3, 27, 2025-05-05 22:58:22, 2);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (19, 44, 47, 2025-05-16 16:42:32, 1);
+INSERT INTO reservations (reservation_id, user_id, book_id, reservation_date, status) VALUES (20, 29, 40, 2025-04-04 08:00:15, 2);
