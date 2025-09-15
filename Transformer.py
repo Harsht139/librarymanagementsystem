@@ -1,36 +1,5 @@
-#!/usr/bin/env python3
-# transformer.py
-#
-# Convert Goodbooks-style CSVs into INSERT statements aligned to your LMS schema.
-# Tables covered:
-#   authors, publishers, categories, books, book_authors, book_categories, users, reviews
-#
-# Inputs (place these in ./real_data/):
-#   - books.csv
-#   - tags.csv
-#   - book_tags.csv
-#   - ratings.csv
-#
-# Outputs (written to ./data/):
-#   - authors.sql
-#   - publishers.sql
-#   - categories.sql
-#   - books.sql
-#   - book_authors.sql
-#   - book_categories.sql
-#   - users.sql
-#   - reviews.sql
-#
-# Notes:
-# - Inserts are ordered to respect foreign keys.
-# - Uses explicit IDs for authors, categories, publishers, and books so link tables can reference safely.
-# - YEAR values clamped to MySQL/MariaDB YEAR range (1901..2155).
-# - ISBN truncated to 20 chars; language defaults to 'English' if missing.
-# - Category names cleaned and limited to top ~50 by frequency across the selected 5,000 books.
-# - 50 synthetic global publishers; randomly assigned to books.
-# - 500 users generated with Faker; reviews mapped from ratings.csv by hashing the original user_id.
-# - Each book gets at most 10 categories and at most 3 reviews.
-
+# Transformer.py
+# Transform real-world book data into SQL insert statements for a book review platform.
 import os
 import re
 import random

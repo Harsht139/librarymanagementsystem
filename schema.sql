@@ -169,3 +169,12 @@ CREATE TABLE reviews (
   FOREIGN KEY (book_id) REFERENCES books(book_id),
   CONSTRAINT chk_rating CHECK (rating BETWEEN 1 AND 5)
 ) ENGINE=InnoDB;
+
+CREATE TABLE book_damages (
+    damage_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    copy_id BIGINT UNSIGNED NOT NULL,
+    damage_date DATE NOT NULL,
+    description TEXT,
+    FOREIGN KEY (copy_id) REFERENCES book_copies(copy_id)
+      ON DELETE CASCADE
+);

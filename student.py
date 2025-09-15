@@ -2,10 +2,224 @@ from rich.console import Console
 import typer
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from rich.table import Table
+
 
 console = Console()
 
+# ---------- HELPER FUNCTION (NEW) ----------
+def ensure_tuple(lst):
+    """
+    Ensures values used for SQLAlchemy IN clauses are always a safe tuple (even for a single id).
+    """
+    if not lst:
+        return (None,)
+    if isinstance(lst, set):
+        lst = list(lst)
+    if len(lst) == 1:
+        return (lst[0],)
+    return tuple(lst)
+# -------------------------------------------
+
+# ---------- RECOMMENDATION FUNCTIONS (NEW) -------------
+def fetch_also_borrowed_books(session: Session, shown_book_ids):
+    """
+    Recommend: Those who borrowed these also borrowed...
+    """
+    shown_book_ids = ensure_tuple(shown_book_ids)
+    if shown_book_ids == (None,):
+        return []
+    user_id_query = text("""
+        SELECT DISTINCT b.user_id
+        FROM borrows b
+        JOIN book_copies bc ON b.copy_id = bc.copy_id
+        WHERE bc.book_id IN :shown_book_ids
+    """)
+    user_ids = [row.user_id for row in session.execute(user_id_query, {"shown_book_ids": shown_book_ids})]
+    user_ids = ensure_tuple(user_ids)
+    if user_ids == (None,):
+        return []
+    rec_query = text("""
+        SELECT bc.book_id, COUNT(*) AS borrow_count
+        FROM borrows b
+        JOIN book_copies bc ON b.copy_id = bc.copy_id
+        WHERE b.user_id IN :user_ids
+            AND bc.book_id NOT IN :shown_book_ids
+        GROUP BY bc.book_id
+        ORDER BY borrow_count DESC
+        LIMIT 3
+    """)
+    rec_rows = session.execute(
+        rec_query, {"user_ids": user_ids, "shown_book_ids": shown_book_ids}
+    ).fetchall()
+    rec_book_ids = [row.book_id for row in rec_rows]
+    rec_book_ids = ensure_tuple(rec_book_ids)
+    if rec_book_ids == (None,):
+        return []
+    book_query = text("""
+        SELECT b.book_id, b.title, GROUP_CONCAT(DISTINCT a.full_name) AS authors
+        FROM books b
+        LEFT JOIN book_authors ba ON b.book_id = ba.book_id
+        LEFT JOIN authors a ON ba.author_id = a.author_id
+        WHERE b.book_id IN :rec_book_ids
+        GROUP BY b.book_id
+    """)
+    return session.execute(book_query, {"rec_book_ids": rec_book_ids}).fetchall()
+
+def fetch_similar_items(session: Session, shown_book_ids):
+    """
+    Recommend: Similar items (by author/category)
+    """
+    shown_book_ids = ensure_tuple(shown_book_ids)
+    if shown_book_ids == (None,):
+        return []
+    rel_query = text("""
+        SELECT DISTINCT ba.author_id, bc.category_id
+        FROM books b
+        LEFT JOIN book_authors ba ON b.book_id = ba.book_id
+        LEFT JOIN book_categories bc ON b.book_id = bc.book_id
+        WHERE b.book_id IN :shown_book_ids
+    """)
+    rels = session.execute(rel_query, {"shown_book_ids": shown_book_ids}).fetchall()
+    author_ids = set()
+    category_ids = set()
+    for rel in rels:
+        if rel.author_id:
+            author_ids.add(rel.author_id)
+        if rel.category_id:
+            category_ids.add(rel.category_id)
+    author_ids = ensure_tuple(author_ids)
+    category_ids = ensure_tuple(category_ids)
+    if author_ids == (None,) and category_ids == (None,):
+        return []
+    sim_query = text("""
+        SELECT DISTINCT b.book_id, b.title, GROUP_CONCAT(DISTINCT a.full_name) AS authors
+        FROM books b
+        LEFT JOIN book_authors ba ON b.book_id = ba.book_id
+        LEFT JOIN authors a ON ba.author_id = a.author_id
+        LEFT JOIN book_categories bc ON b.book_id = bc.book_id
+        WHERE (ba.author_id IN :author_ids OR bc.category_id IN :category_ids)
+            AND b.book_id NOT IN :shown_book_ids
+        GROUP BY b.book_id
+        LIMIT 3
+    """)
+    return session.execute(
+        sim_query, {
+            "author_ids": author_ids,
+            "category_ids": category_ids,
+            "shown_book_ids": shown_book_ids
+        }
+    ).fetchall()
+# ---------------------------------------------------------------
+
 # ---------- SEARCH FUNCTION ----------
+def search_books(session: Session):
+    while True:
+        console.print("""
+============== Search Books ==============
+1. Search by Title
+2. Search by Author
+3. Search by Category
+4. Back
+==========================================
+        """)
+        choice = typer.prompt("Enter your choice")
+
+        if choice == "4":
+            break
+
+        term = typer.prompt("Enter search term")
+
+        if choice == "1":  # Title
+            like_term = f"%{term}%"
+            query = text("""
+                SELECT b.book_id, b.title,
+                       GROUP_CONCAT(DISTINCT a.full_name) AS authors,
+                       GROUP_CONCAT(DISTINCT c.name) AS categories
+                FROM books b
+                LEFT JOIN book_authors ba ON b.book_id = ba.book_id
+                LEFT JOIN authors a ON ba.author_id = a.author_id
+                LEFT JOIN book_categories bc ON b.book_id = bc.book_id
+                LEFT JOIN categories c ON bc.category_id = c.category_id
+                WHERE b.title LIKE :term
+                GROUP BY b.book_id
+            """)
+
+        elif choice == "2":  # Author
+            search_term = term.lower().replace(".", "").replace(" ", "")
+            like_term = f"%{search_term}%"
+            query = text("""
+                SELECT b.book_id, b.title,
+                       GROUP_CONCAT(DISTINCT a.full_name) AS authors,
+                       GROUP_CONCAT(DISTINCT c.name) AS categories
+                FROM books b
+                LEFT JOIN book_authors ba ON b.book_id = ba.book_id
+                LEFT JOIN authors a ON ba.author_id = a.author_id
+                LEFT JOIN book_categories bc ON b.book_id = bc.book_id
+                LEFT JOIN categories c ON bc.category_id = c.category_id
+                WHERE REPLACE(REPLACE(LOWER(a.full_name), '.', ''), ' ', '') LIKE :term
+                GROUP BY b.book_id
+            """)
+
+        elif choice == "3":  # Category
+            like_term = f"%{term}%"
+            query = text("""
+                SELECT b.book_id, b.title,
+                       GROUP_CONCAT(DISTINCT a.full_name) AS authors,
+                       GROUP_CONCAT(DISTINCT c.name) AS categories
+                FROM books b
+                LEFT JOIN book_authors ba ON b.book_id = ba.book_id
+                LEFT JOIN authors a ON ba.author_id = a.author_id
+                LEFT JOIN book_categories bc ON b.book_id = bc.book_id
+                LEFT JOIN categories c ON bc.category_id = c.category_id
+                WHERE c.name LIKE :term
+                GROUP BY b.book_id
+            """)
+
+        else:
+            console.print("[red]Invalid choice![/red]")
+            continue
+
+        results = session.execute(query, {"term": like_term}).fetchall()
+        display_books(results)
+
+        # ---------- RECOMMENDATION DISPLAY (NEW SECTION) ----------
+        shown_book_ids = [row.book_id for row in results]
+
+        also_borrowed = fetch_also_borrowed_books(session, shown_book_ids)
+        if also_borrowed:
+            console.print("\n[bold yellow]Those Who Borrowed These Also Borrowed:[/bold yellow]")
+            for b in also_borrowed:
+                console.print(f"• {b.title} [magenta]by {b.authors or 'N/A'}[/magenta]")
+        else:
+            console.print("\n[yellow]No 'also borrowed' recommendations available.[/yellow]")
+
+        similar_items = fetch_similar_items(session, shown_book_ids)
+        if similar_items:
+            console.print("\n[bold green]Similar Items:[/bold green]")
+            for b in similar_items:
+                console.print(f"• {b.title} [magenta]by {b.authors or 'N/A'}[/magenta]")
+        else:
+            console.print("\n[green]No similar item recommendations available.[/green]")
+        # ----------------------------------------------------------
+# (The rest of your original code remains unchanged and should follow here)
+# my_borrowed_books, display_books, issue_book, return_book, view_account, update_full_name, update_phone,
+# account_menu, student_menu
+
+# ---------- SEARCH FUNCTION ----------
+def display_recommendations(books, title, session):
+    """Display recommendations in a formatted way"""
+    if not books:
+        return
+        
+    console.print(f"\n[bold cyan]📚 {title}[/bold cyan]")
+    for i, book in enumerate(books, 1):
+        authors = book.authors or 'Unknown Author'
+        console.print(f"  {i}. {book.title} [magenta]by {authors}[/magenta]")
+    
+    # Add some space after recommendations
+    console.print("")
+
 def search_books(session: Session):
     while True:
         console.print("""
@@ -75,8 +289,30 @@ def search_books(session: Session):
             console.print("[red]Invalid choice![/red]")
             continue
 
+        # Execute search query
         results = session.execute(query, {"term": like_term}).fetchall()
+        
+        # Display search results
+        if not results:
+            console.print("[yellow]No books found matching your search.[/yellow]")
+            continue
+            
         display_books(results)
+        
+        # Get book IDs from search results for recommendations
+        book_ids = [str(book.book_id) for book in results]
+        
+        # Show recommendations if we have book IDs
+        if book_ids:
+            console.print("\n[bold cyan]✨ Recommendations for you:[/bold cyan]")
+            
+            # Get "Users also borrowed" recommendations
+            also_borrowed = fetch_also_borrowed_books(session, book_ids)
+            display_recommendations(also_borrowed, "📖 Readers also borrowed:", session)
+            
+            # Get similar items recommendations
+            similar_items = fetch_similar_items(session, book_ids)
+            display_recommendations(similar_items, "📚 Similar items you might like:", session)
 
 def my_borrowed_books(user_id: int, session: Session):
     query = text("""
