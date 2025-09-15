@@ -65,9 +65,13 @@ DB_NAME=library_db
 
 2. **Login**:
    - Choose to login as a librarian or student
-   - Default librarian credentials (you should change these in production):
-     - Username: admin
-     - Password: admin123
+   - Default librarian credentials:
+     - Username: harsh
+     - Password: Harsh@123
+
+    - Default student credentials:
+      - Username: monica1
+      - Password: monica123
 
 3. **Main Menu**:
    - Search for books
@@ -100,22 +104,3 @@ DB_NAME=library_db
 - Manage user accounts
 - Generate reports and analytics
 - View borrowing statistics
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Built with ❤️ using Python
-- Uses [Rich](https://github.com/Textualize/rich) for beautiful terminal formatting
-- Uses [Typer](https://typer.tiangolo.com/) for CLI interface
-- Uses [SQLAlchemy](https://www.sqlalchemy.org/) for database operations
